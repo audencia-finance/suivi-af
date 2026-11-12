@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Suivi AF – missions et projets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="logo-af.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Écran de configuration manquante -->
+<section id="ecran-config" class="ecran-centre" hidden>
+  <div class="carte-auth">
+    <h1>Suivi AF</h1>
+    <p>L'application n'est pas encore reliée à sa base de données.</p>
+    <p>Ouvrez le fichier <code>config.js</code> et renseignez l'adresse du projet Supabase et sa clé publique (« publishable key »). Le guide <code>README.md</code> détaille les étapes.</p>
+  </div>
+</section>
+
+<!-- Connexion / création de compte -->
+<section id="ecran-auth" class="auth" hidden>
+  <div class="auth-visuel">
+    <div class="logo-disque logo-grand"><img src="logo-af.png" alt="Logo Audencia Finance" width="64" height="70"></div>
+    <span class="marque-mot">Audencia Finance</span>
+    <h1>Suivi des missions</h1>
+    <span class="filet"></span>
+    <p>Missions, échéances et avancement de l'association, au même endroit.</p>
+  </div>
+  <div class="auth-form">
+  <div class="carte-auth">
+    <div class="onglets" role="tablist">
+      <button type="button" role="tab" id="tab-connexion" aria-selected="true" data-action="auth-onglet" data-onglet="connexion">Se connecter</button>
+      <button type="button" role="tab" id="tab-inscription" aria-selected="false" data-action="auth-onglet" data-onglet="inscription">Première connexion</button>
+    </div>
+
+    <form id="form-connexion" novalidate>
+      <label>Adresse e-mail
+        <input type="email" name="email" autocomplete="username" required>
+      </label>
+      <label>Mot de passe
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="msg-erreur" id="err-connexion" role="alert" hidden></p>
+      <button class="btn btn-principal" type="submit">Se connecter</button>
+      <button class="lien" type="button" data-action="mdp-oublie">Mot de passe oublié</button>
+    </form>
+
+    <form id="form-inscription" novalidate hidden>
+      <p class="aide">Utilisez l'adresse e-mail et le code d'invitation transmis par le bureau.</p>
+      <label>Adresse e-mail
+        <input type="email" name="email" autocomplete="username" required>
+      </label>
+      <label>Code d'invitation
+        <input type="text" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      </label>
+      <div id="champs-premier" hidden>
+        <p class="aide aide-info">Aucun compte n'existe encore : vous créez le compte administrateur du suivi.</p>
+        <label>Prénom
+          <input type="text" name="prenom" autocomplete="given-name">
+        </label>
+        <label>Nom
+          <input type="text" name="nom" autocomplete="family-name">
+        </label>
+      </div>
+      <label>Choisissez un mot de passe (8 caractères minimum)
+        <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <p class="msg-erreur" id="err-inscription" role="alert" hidden></p>
+      <button class="btn btn-principal" type="submit">Créer mon compte</button>
+    </form>
+  </div>
+  </div>
+</section>
+
+<!-- Application -->
+<div id="app" hidden>
+  <aside class="barre">
+    <div class="marque">
+      <div class="logo-disque"><img src="logo-af.png" alt="Logo Audencia Finance" width="64" height="70"></div>
+      <span class="marque-mot" id="marque-nom">Audencia Finance</span>
+      <span class="marque-titre">Suivi des missions</span>
+      <span class="filet"></span>
+      <span class="marque-sync" id="sync" title=""></span>
+    </div>
+    <nav id="nav" aria-label="Navigation principale"></nav>
+    <div class="compte">
+      <div class="compte-nom" id="compte-nom"></div>
+      <div class="compte-poste" id="compte-poste"></div>
+      <div class="compte-actions">
+        <button class="lien" type="button" data-action="mdp-changer">Mot de passe</button>
+        <button class="lien" type="button" data-action="deconnexion">Se déconnecter</button>
+      </div>
+    </div>
+  </aside>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<!-- Compte désactivé -->
+<section id="ecran-inactif" class="ecran-centre" hidden>
+  <div class="carte-auth">
+    <h1>Compte désactivé</h1>
+    <p>Votre compte n'a plus accès au suivi. Contactez un administrateur du bureau si c'est une erreur.</p>
+    <button class="btn" type="button" data-action="deconnexion">Se déconnecter</button>
+  </div>
+</section>
+
+<dialog id="dlg" aria-labelledby="dlg-titre"></dialog>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

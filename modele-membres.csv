@@ -1,0 +1,17 @@
+prenom;nom;email;pole;sous_pole;poste;role
+Prénom;Nom;president.corpo@exemple.fr;Corporate finance;;Président du pôle;responsable
+Prénom;Nom;vp1.corpo@exemple.fr;Corporate finance;;Vice-président;responsable
+Prénom;Nom;vp2.corpo@exemple.fr;Corporate finance;;Vice-président;responsable
+Prénom;Nom;resp.expertise.corpo@exemple.fr;Corporate finance;Expertise;Responsable Expertise;responsable
+Prénom;Nom;resp.event.corpo@exemple.fr;Corporate finance;Event;Responsable Event;responsable
+Prénom;Nom;resp.merch.corpo@exemple.fr;Corporate finance;Merch;Responsable Merch;responsable
+Prénom;Nom;resp.com.corpo@exemple.fr;Corporate finance;Communication;Responsable Communication;responsable
+Prénom;Nom;membre.corpo@exemple.fr;Corporate finance;Expertise;Membre;membre
+Prénom;Nom;president.marches@exemple.fr;Marchés financiers;;Président du pôle;responsable
+Prénom;Nom;vp1.marches@exemple.fr;Marchés financiers;;Vice-président;responsable
+Prénom;Nom;vp2.marches@exemple.fr;Marchés financiers;;Vice-président;responsable
+Prénom;Nom;resp.expertise.marches@exemple.fr;Marchés financiers;Expertise;Responsable Expertise;responsable
+Prénom;Nom;resp.event.marches@exemple.fr;Marchés financiers;Event;Responsable Event;responsable
+Prénom;Nom;resp.merch.marches@exemple.fr;Marchés financiers;Merch;Responsable Merch;responsable
+Prénom;Nom;resp.com.marches@exemple.fr;Marchés financiers;Communication;Responsable Communication;responsable
+Prénom;Nom;membre.marches@exemple.fr;Marchés financiers;Expertise;Membre;membre
