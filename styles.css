@@ -248,6 +248,19 @@ tr.inactif { opacity: 0.55; }
 .pastille-plus { background: var(--marine); color: #fff; }
 .vide { background: var(--surface); border-radius: var(--rayon); padding: 44px 20px; text-align: center; display: grid; justify-items: center; gap: 8px; }
 
+/* ---------- data room ---------- */
+.documents { list-style: none; margin: 0 0 14px; padding: 6px 0; background: var(--surface); border-radius: var(--rayon); }
+.document { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 6px 18px; align-items: center; padding: 16px 24px; border-top: 1px solid #eef1f6; }
+.document:first-child { border-top: 0; }
+.doc-type { width: 56px; height: 56px; border-radius: 16px; background: #e6ecf8; color: var(--marine); font-size: 12.5px; font-weight: 600; display: grid; place-items: center; }
+.doc-lien { background: #d9f2e4; color: #0e5b34; }
+.doc-titre { display: block; font-size: 17px; font-weight: 500; color: var(--marine); overflow-wrap: anywhere; }
+.doc-desc { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-corps .discret { margin: 2px 0 0; overflow-wrap: anywhere; }
+.doc-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.form-pile { display: grid; gap: 13px; }
+.form-pile fieldset { display: grid; gap: 8px; }
+
 /* ---------- agenda ---------- */
 .mois-nav { display: flex; align-items: center; gap: 8px; }
 .mois-nom { font-size: 19px; font-weight: 500; min-width: 160px; text-align: center; }
@@ -326,7 +339,7 @@ dialog textarea.large { width: 100%; }
   .compte-actions { justify-content: flex-end; }
   .compte .lien { font-size: 13px; }
   #nav { position: fixed; left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 20; flex-direction: row; background: var(--marine); padding: 6px; gap: 2px; border-radius: 22px; box-shadow: 0 8px 24px rgba(15, 35, 70, 0.3); }
-  .nav-lien { flex: 1; flex-direction: column; gap: 2px; padding: 6px 2px; font-size: 11.5px; position: relative; text-align: center; border: 0; border-radius: 16px; }
+  .nav-lien { flex: 1; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 1px; font-size: 11px; position: relative; text-align: center; border: 0; border-radius: 16px; }
   .nav-long { display: none; }
   .nav-court { display: inline; }
   .nav-nb { position: absolute; top: 2px; left: 54%; margin: 0; min-width: 17px; height: 17px; font-size: 10.5px; padding: 0 4px; }
@@ -342,6 +355,9 @@ dialog textarea.large { width: 100%; }
   .mission { grid-template-columns: minmax(0, 1fr); grid-template-areas: "tete" "meta" "rythme" "pied"; gap: 8px; padding: 16px; }
   .mission-pied { justify-content: flex-start; }
   .calendrier { display: none; }
+  .document { grid-template-columns: 48px minmax(0, 1fr); padding: 16px; }
+  .doc-type { width: 48px; height: 48px; border-radius: 14px; }
+  .doc-actions { grid-column: 1 / -1; justify-content: flex-start; }
   /* Tableaux de rythme : chaque ligne devient un bloc, la barre passe sous le nom */
   .table-rythme, .table-rythme tbody { display: block; }
   .table-rythme thead { display: none; }

@@ -8,6 +8,7 @@ Application web de suivi des missions et projets de l'association : chaque membr
 - **Rythme attendu** : linéaire entre le début et l'échéance (50 % à mi-parcours, 100 % à la fin). Chaque mission, membre et pôle est « au-dessus », « dans » ou « en dessous » du rythme.
 - **Alertes** : échéance proche, retard sur le rythme, mission sans mise à jour, mission à valider.
 - **Agenda** : calendrier des échéances, lien d'abonnement pour Google Agenda, export .ics.
+- **Data Room** : fichiers (Excel, PDF…) et liens de documents en ligne, accessibles à tous les membres. Les responsables et les administrateurs déposent, remplacent et retirent.
 - **Temps réel** : les changements apparaissent chez les autres sans recharger la page.
 
 ## Contenu du dossier
@@ -19,6 +20,7 @@ Application web de suivi des missions et projets de l'association : chaque membr
 | `config.js` | Adresse et clé publique du projet Supabase (à remplir) |
 | `vendor/supabase.js` | Bibliothèque Supabase (version figée) |
 | `supabase/schema.sql` | Base de données : tables, règles de sécurité, agenda |
+| `supabase/data-room.sql` | Ajout de la Data Room à une base déjà installée (inclus dans `schema.sql`) |
 | `modele-membres.csv` | Modèle pour importer la liste des membres |
 
 ## Mise en ligne
@@ -67,6 +69,11 @@ Après les élections, un administrateur change le poste et le rôle de chacun d
 ## Réglages (administrateur)
 
 Onglet **Équipe > Réglages** : nom de l'association, liste des pôles, sous-pôles et types de mission, tolérance autour du rythme (10 points par défaut), délais d'alerte.
+
+## Data Room
+
+- **Fichier** : une copie est conservée dans le stockage privé du projet Supabase (50 Mo par fichier, 1 Go au total sur l'offre gratuite). Pour le mettre à jour : télécharger, modifier, puis **Remplacer**.
+- **Lien** : pour un classeur modifiable à plusieurs en temps réel, ajoutez le lien d'un document en ligne (Excel Online, Google Sheets). L'application garde le lien ; le document reste chez Microsoft ou Google, avec ses propres droits de partage.
 
 ## Limites connues
 

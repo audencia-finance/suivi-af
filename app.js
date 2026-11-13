@@ -44,6 +44,7 @@
     alertes: '<path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5zM10 20h4"/>',
     equipe: '<path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5M16 11a2.5 2.5 0 1 0 0-5M17.5 14.8c1.7.5 2.7 1.9 3 4.2"/>',
   };
+  ICONES.dataroom = '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2zM8 13h8"/>';
   const icone = (n) => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n]}</svg>`;
 
   // États d'une mission : libellé + symbole (jamais la couleur seule)
@@ -69,6 +70,7 @@
   const etatApp = {
     session: null, moi: null, pret: false,
     profils: [], missions: [], journal: [], params: null, invitations: [],
+    documents: [], docsDispo: true,
     vue: 'tableau-de-bord',
     f: { q: '', pole: '', etat: '', qui: 'toutes' },
     tdbPole: '',
@@ -76,7 +78,9 @@
     majLe: null, direct: false,
     dlg: null, // { type, id, ... }
   };
-  const VUES = ['tableau-de-bord', 'missions', 'agenda', 'alertes', 'equipe'];
+  const VUES = ['tableau-de-bord', 'missions', 'agenda', 'alertes', 'equipe', 'data-room'];
+  const BUCKET = 'data-room';
+  const TAILLE_MAX = 50 * 1024 * 1024;
   let sb = null;
 
   // ------------------------------------------------------------------ calculs
@@ -94,6 +98,14 @@
   }
   const peutControler = (m) => controle(etatApp.moi, m.pole, m.sous_pole);
   const peutMettreAJour = (m) => peutControler(m) || ((estAssigne(m) || m.cree_par === etatApp.moi?.id) && m.statut !== 'validee');
+  const peutDeposer = () => ['admin', 'responsable'].includes(etatApp.moi?.role);
+  const fmtTaille = (o) => (o == null ? '' : o < 1024 ? `${o} o` : o < 1048576 ? `${Math.round(o / 1024)} Ko` : `${(o / 1048576).toFixed(1).replace('.', ',')} Mo`);
+  const extDe = (n) => { const m = /\.([a-z0-9]{1,5})$/i.exec(n || ''); return m ? m[1].toUpperCase() : 'DOC'; };
+  // Le stockage n'accepte que des noms simples : on garde le vrai nom à part, pour l'affichage
+  function cheminStockage(nom) {
+    const propre = String(nom).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80) || 'fichier';
+    return `${crypto.randomUUID()}/${propre}`;
+  }
   const peutValider = (m) => peutControler(m) && (estAdmin() || !estAssigne(m));
 
   // Rythme attendu : linéaire du premier au dernier jour (50 % à mi-parcours, 100 % à l'échéance)
@@ -502,8 +514,40 @@
     </section>`;
   }
 
+  function ligneDocument(d) {
+    const fichier = d.genre === 'fichier', depot = peutDeposer();
+    const lien = lienSur(d.url);
+    const maj = new Date(d.updated_at) - new Date(d.created_at) > 60000;
+    return `<li class="document">
+      <span class="doc-type${fichier ? '' : ' doc-lien'}" aria-hidden="true">${fichier ? esc(extDe(d.nom_fichier)) : 'LIEN'}</span>
+      <div class="doc-corps">
+        <strong class="doc-titre">${esc(d.titre)}</strong>
+        ${d.description ? `<p class="doc-desc">${esc(d.description)}</p>` : ''}
+        <p class="discret">${fichier ? `${esc(d.nom_fichier)}, ${fmtTaille(d.taille)}` : 'Document en ligne'}<br>Ajouté le ${fmtDate(isoJour(new Date(d.created_at)))} par ${esc(d.ajoute_par ? nomDe(d.ajoute_par) : 'un administrateur')}${maj ? `, mis à jour ${ilYA(d.updated_at)}` : ''}</p>
+      </div>
+      <div class="doc-actions">
+        ${fichier ? `<button class="btn btn-principal btn-petit" type="button" data-action="doc-telecharger" data-id="${d.id}">Télécharger</button>`
+          : (lien ? `<a class="btn btn-principal btn-petit" href="${esc(lien)}" target="_blank" rel="noopener noreferrer">Ouvrir</a>` : '')}
+        ${depot && fichier ? `<button class="btn btn-petit" type="button" data-action="doc-remplacer" data-id="${d.id}">Remplacer</button>` : ''}
+        ${depot ? `<button class="btn btn-petit btn-danger" type="button" data-action="doc-supprimer" data-id="${d.id}">Retirer</button>` : ''}
+      </div>
+    </li>`;
+  }
+  function vueDataRoom() {
+    const depot = peutDeposer();
+    const bouton = '<button class="btn btn-principal" type="button" data-action="doc-ajout">Ajouter un document</button>';
+    let h = `<header class="entete"><h1>Data Room</h1>${depot && etatApp.docsDispo && etatApp.documents.length ? bouton : ''}</header>`;
+    if (!etatApp.docsDispo) return h + '<div class="vide"><p>La Data Room n\'est pas encore activée dans la base de données.</p><p class="discret">Un administrateur doit relancer le script supabase/schema.sql.</p></div>';
+    if (!etatApp.documents.length) {
+      return h + `<div class="vide"><p>La Data Room est vide.</p>
+        <p class="discret">${depot ? 'Déposez un fichier, ou ajoutez le lien d\'un document en ligne. Tous les membres y auront accès.' : 'Les responsables y déposeront les fichiers de l\'association.'}</p>${depot ? bouton : ''}</div>`;
+    }
+    return h + `<ul class="documents">${etatApp.documents.map(ligneDocument).join('')}</ul>
+      <p class="discret">Un fichier déposé ici est une copie conservée : pour le modifier, téléchargez-le, puis remplacez-le par la nouvelle version. Pour travailler à plusieurs en même temps, ajoutez le lien d'un document en ligne (Excel Online, Google Sheets).</p>`;
+  }
+
   // ------------------------------------------------------------------ rendu
-  const RENDUS = { 'tableau-de-bord': vueTableauDeBord, missions: vueMissions, agenda: vueAgenda, alertes: vueAlertes, equipe: vueEquipe };
+  const RENDUS = { 'tableau-de-bord': vueTableauDeBord, missions: vueMissions, agenda: vueAgenda, alertes: vueAlertes, equipe: vueEquipe, 'data-room': vueDataRoom };
   function rendre() {
     if (!etatApp.pret) return;
     const main = $('#main');
@@ -523,7 +567,7 @@
   }
   function rendreNav() {
     const nb = alertes().length;
-    const items = [['tableau-de-bord', 'Tableau de bord', 'tdb', 'Synthèse'], ['missions', 'Missions', 'missions'], ['agenda', 'Agenda', 'agenda'], ['alertes', 'Alertes', 'alertes'], ['equipe', 'Équipe', 'equipe']];
+    const items = [['tableau-de-bord', 'Tableau de bord', 'tdb', 'Synthèse'], ['missions', 'Missions', 'missions'], ['agenda', 'Agenda', 'agenda'], ['alertes', 'Alertes', 'alertes'], ['equipe', 'Équipe', 'equipe'], ['data-room', 'Data Room', 'dataroom', 'Data']];
     $('#nav').innerHTML = items.map(([v, n, i, court]) => `<a href="#${v}" class="nav-lien"${etatApp.vue === v ? ' aria-current="page"' : ''}>${icone(i)}<span${court ? ` class="nav-long"` : ''}>${n}</span>${court ? `<span class="nav-court" aria-hidden="true">${court}</span>` : ''}${v === 'alertes' && nb ? `<span class="nav-nb" aria-label="${nb} alertes">${nb}</span>` : ''}</a>`).join('');
     const moi = etatApp.moi;
     $('#compte-nom').textContent = `${moi.prenom} ${moi.nom}`;
@@ -548,15 +592,18 @@
     enCharge = true;
     try {
       const uid = etatApp.session.user.id;
-      const [p, m, j, par] = await Promise.all([
+      const [p, m, j, par, docs] = await Promise.all([
         sb.from('profils').select('*').order('nom'),
         sb.from('missions').select('*, mission_membres(profil_id)').order('fin'),
         sb.from('journal').select('*').order('created_at', { ascending: false }).limit(300),
         sb.from('parametres').select('*').eq('id', 1).maybeSingle(),
+        sb.from('documents').select('*').order('created_at', { ascending: false }),
       ]);
       const err = p.error || m.error || j.error || par.error;
       if (err) throw err;
       etatApp.profils = p.data; etatApp.missions = m.data; etatApp.journal = j.data; etatApp.params = par.data;
+      // La Data Room ne doit pas bloquer le reste si sa table n'est pas encore installée
+      etatApp.docsDispo = !docs.error; etatApp.documents = docs.data || [];
       etatApp.moi = p.data.find((x) => x.id === uid) || null;
       if (etatApp.moi?.role === 'admin') {
         const inv = await sb.from('invitations').select('*').order('nom');
@@ -792,6 +839,40 @@
     try { await navigator.clipboard.writeText(texte); toast(succes || 'Copié.', 'ok'); }
     catch { ouvrirDlg(`<h2 id="dlg-titre">Copiez ce texte</h2><textarea rows="12" readonly class="large">${esc(texte)}</textarea>`); }
   }
+  function formDocument() {
+    ouvrirDlg(`<h2 id="dlg-titre">Ajouter un document</h2>
+      <form id="form-document" class="form-pile" novalidate>
+        <fieldset><legend>Que voulez-vous ajouter ?</legend>
+          <label class="case"><input type="radio" name="genre" value="fichier" checked data-change="doc-genre"> Un fichier (Excel, PDF…), conservé ici</label>
+          <label class="case"><input type="radio" name="genre" value="lien" data-change="doc-genre"> Le lien d'un document en ligne, modifiable à plusieurs en temps réel</label>
+        </fieldset>
+        <label id="champ-fichier">Fichier (50 Mo maximum)<input type="file" name="fichier" data-change="doc-fichier"></label>
+        <label id="champ-lien" hidden>Adresse du document<input type="url" name="url" placeholder="https://…"></label>
+        <label>Titre<input name="titre" required maxlength="120"></label>
+        <label>Description (facultatif)<textarea name="description" rows="2"></textarea></label>
+        <p class="msg-erreur" id="err-document" role="alert" hidden></p>
+        <div class="actions"><button class="btn btn-principal" type="submit">Ajouter à la Data Room</button><button class="btn" type="button" data-action="fermer">Annuler</button></div>
+      </form>`, { type: 'form-document' });
+  }
+  function formRemplacement(id) {
+    const d = etatApp.documents.find((x) => x.id === id);
+    ouvrirDlg(`<h2 id="dlg-titre">Remplacer le fichier</h2>
+      <p>« ${esc(d.titre)} » : la nouvelle version prend la place de ${esc(d.nom_fichier)}. L'ancienne est supprimée.</p>
+      <form id="form-remplacement" class="form-pile" data-id="${d.id}">
+        <label>Nouvelle version (50 Mo maximum)<input type="file" name="fichier" required></label>
+        <p class="msg-erreur" id="err-document" role="alert" hidden></p>
+        <div class="actions"><button class="btn btn-principal" type="submit">Remplacer le fichier</button><button class="btn" type="button" data-action="fermer">Annuler</button></div>
+      </form>`, { type: 'form-remplacement' });
+  }
+  // Envoie un fichier dans le stockage ; renvoie { chemin, nom_fichier, taille } ou un message d'erreur
+  async function deposerFichier(fichier) {
+    if (!fichier || !fichier.size) return { erreur: 'Choisissez un fichier.' };
+    if (fichier.size > TAILLE_MAX) return { erreur: `Ce fichier pèse ${fmtTaille(fichier.size)} : la limite est de 50 Mo.` };
+    const chemin = cheminStockage(fichier.name);
+    const r = await sb.storage.from(BUCKET).upload(chemin, fichier, { contentType: fichier.type || 'application/octet-stream', upsert: false });
+    if (r.error) return { erreur: "L'envoi du fichier a échoué : " + msgErreur(r.error) };
+    return { chemin, nom_fichier: fichier.name, taille: fichier.size };
+  }
   function formMotDePasse(recuperation) {
     ouvrirDlg(`<h2 id="dlg-titre">${recuperation ? 'Choisissez un nouveau mot de passe' : 'Changer de mot de passe'}</h2>
       <form id="form-mdp">
@@ -863,6 +944,25 @@
     },
     copier: (el) => copier($('#' + el.dataset.cible).value, 'Lien copié.'),
     ics: telechargerIcs,
+    'doc-ajout': formDocument,
+    'doc-remplacer': (el) => formRemplacement(el.dataset.id),
+    'doc-telecharger': async (el) => {
+      const d = etatApp.documents.find((x) => x.id === el.dataset.id);
+      el.disabled = true;
+      const r = await sb.storage.from(BUCKET).createSignedUrl(d.chemin, 120);
+      el.disabled = false;
+      if (r.error) return toast('Téléchargement impossible : ' + msgErreur(r.error), 'erreur');
+      // Le nom d'origine est ajouté ici : la bibliothèque encode deux fois les accents
+      location.href = `${r.data.signedUrl}&download=${encodeURIComponent(d.nom_fichier)}`;
+    },
+    'doc-supprimer': (el) => {
+      const d = etatApp.documents.find((x) => x.id === el.dataset.id);
+      confirmer('Retirer ce document ?', d.genre === 'fichier' ? `« ${d.titre} » sera supprimé définitivement de la Data Room.` : `Le lien « ${d.titre} » sera retiré. Le document en ligne lui-même n'est pas supprimé.`, 'Retirer le document', async () => {
+        if (!(await exec(sb.from('documents').delete().eq('id', d.id).select().single(), 'Document retiré.'))) return;
+        if (d.chemin) await sb.storage.from(BUCKET).remove([d.chemin]);
+        fermerDlg(); charger();
+      });
+    },
     membre: (el) => formMembre(el.dataset.id),
     'inv-ajout': formInvitation,
     'inv-import': formImport,
@@ -883,6 +983,11 @@
     const el = ev.target;
     if (el.dataset.change === 'tdb-pole') { etatApp.tdbPole = el.value; rendre(); }
     if (el.dataset.change === 'filtre') { etatApp.f[el.dataset.cle] = el.value; rendre(); }
+    if (el.dataset.change === 'doc-genre') {
+      const lien = el.value === 'lien';
+      $('#champ-fichier').hidden = lien; $('#champ-lien').hidden = !lien;
+    }
+    if (el.dataset.change === 'doc-fichier' && el.files[0] && !el.form.titre.value) el.form.titre.value = el.files[0].name.replace(/\.[a-z0-9]{1,5}$/i, '');
     if (el.id === 'import-fichier' && el.files[0]) el.files[0].text().then((t) => { $('#import-texte').value = t; });
   });
   document.addEventListener('input', (ev) => {
@@ -975,6 +1080,36 @@
         dlg.dataset.saisie = '0';
         await charger();
         ouvrirMission(id);
+      }
+      else if (f.id === 'form-document') {
+        montrerErreur('err-document', '');
+        const base = { titre: v.titre.trim(), description: v.description.trim() || null };
+        if (!base.titre) return montrerErreur('err-document', 'Donnez un titre au document.');
+        if (v.genre === 'lien') {
+          if (!lienSur(v.url)) return montrerErreur('err-document', "L'adresse doit commencer par https://");
+          const r = await sb.from('documents').insert({ ...base, genre: 'lien', url: v.url.trim() });
+          if (r.error) return montrerErreur('err-document', msgErreur(r.error));
+        } else {
+          if (bouton) bouton.textContent = 'Envoi en cours…';
+          const d = await deposerFichier(f.fichier.files[0]);
+          if (bouton) bouton.textContent = 'Ajouter à la Data Room';
+          if (d.erreur) return montrerErreur('err-document', d.erreur);
+          const r = await sb.from('documents').insert({ ...base, genre: 'fichier', ...d });
+          if (r.error) { await sb.storage.from(BUCKET).remove([d.chemin]); return montrerErreur('err-document', msgErreur(r.error)); }
+        }
+        fermerDlg(); toast('Document ajouté à la Data Room.', 'ok'); charger();
+      }
+      else if (f.id === 'form-remplacement') {
+        montrerErreur('err-document', '');
+        const ancien = etatApp.documents.find((x) => x.id === f.dataset.id);
+        if (bouton) bouton.textContent = 'Envoi en cours…';
+        const d = await deposerFichier(f.fichier.files[0]);
+        if (bouton) bouton.textContent = 'Remplacer le fichier';
+        if (d.erreur) return montrerErreur('err-document', d.erreur);
+        const r = await sb.from('documents').update(d).eq('id', ancien.id).select().single();
+        if (r.error) { await sb.storage.from(BUCKET).remove([d.chemin]); return montrerErreur('err-document', msgErreur(r.error)); }
+        if (ancien.chemin) await sb.storage.from(BUCKET).remove([ancien.chemin]);
+        fermerDlg(); toast('Fichier remplacé.', 'ok'); charger();
       }
       else if (f.id === 'form-membre') {
         const r = await exec(sb.from('profils').update({ prenom: v.prenom.trim(), nom: v.nom.trim(), pole: v.pole || null, sous_pole: v.sous_pole || null, poste: v.poste.trim() || null, role: v.role, actif: f.actif.checked }).eq('id', f.dataset.id).select().single(), 'Compte mis à jour.');
